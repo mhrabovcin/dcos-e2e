@@ -22,7 +22,6 @@ class _ConflictingContainerError(Exception):
     created.
     """
 
-
 class DCOS_Docker:  # pylint: disable=invalid-name
     """
     A record of a DC/OS Docker cluster.
@@ -39,6 +38,7 @@ class DCOS_Docker:  # pylint: disable=invalid-name
         custom_ca_key: Optional[Path],
         log_output_live: bool,
         files_to_copy_to_installer: Dict[Path, Path],
+        tmp_dir_path: Path=Path('/tmp'),
     ) -> None:
         """
         Create a DC/OS Docker cluster.
@@ -60,6 +60,8 @@ class DCOS_Docker:  # pylint: disable=invalid-name
                 the installer node before installing DC/OS. Currently on DC/OS
                 Docker the only supported paths on the installer are in the
                 `/genconf` directory.
+            tmp_dir_path: Path to temporary directory where we can create
+                and copy necessary files.
         """
         self.log_output_live = log_output_live
 
@@ -71,10 +73,7 @@ class DCOS_Docker:  # pylint: disable=invalid-name
         # We create a new instance of DC/OS Docker and we work in this
         # directory.
         # This reduces the chance of conflicts.
-        # We put this in the `/tmp` directory because that is writable on
-        # the Vagrant VM.
-        tmp = Path('/tmp')
-        self._path = tmp / 'dcos-docker-{random}'.format(random=random)
+        self._path = tmp_dir_path / 'dcos-docker-{random}'.format(random=random)
 
         copytree(
             src=str(dcos_docker_path),
@@ -268,4 +267,68 @@ class DCOS_Docker:  # pylint: disable=invalid-name
         return self._nodes(
             container_base_name=self._variables['PUBLIC_AGENT_CTR'],
             num_nodes=int(self._variables['PUBLIC_AGENTS']),
+        )
+
+
+class DCOS_Docker_Backend:
+    """
+    Helper class that can create backend and customize some configuration
+    options that aren't exposed with `Cluster` constructor.
+    """
+
+    def __init__(
+        self,
+        generate_config_path: Path,
+        dcos_docker_path: Path,
+        tmp_dir_path: Path=Path('/tmp')
+    ) -> None:
+        """
+        Args:
+            generate_config_path: Path to a file with DC/OS installer.
+            dcos_docker_path: Path to a directory containing a checkout of
+                dcos-docker.
+            tmp_dir_path: Path to a directory which can be used to store
+                temporary files.
+        """
+        self._generate_config_path = generate_config_path
+        self._dcos_docker_path = dcos_docker_path
+        self._tmp_dir_path = tmp_dir_path
+
+    def create(
+        self,
+        masters: int,
+        agents: int,
+        public_agents: int,
+        extra_config: Dict[str, Any],
+        custom_ca_key: Optional[Path],
+        log_output_live: bool,
+        files_to_copy_to_installer: Dict[Path, Path],
+    ) -> DCOS_Docker:
+        """
+        Create a DC/OS cluster using dcos-docker.
+
+        Args:
+            masters: The number of master nodes to create.
+            agents: The number of agent nodes to create.
+            public_agents: The number of public agent nodes to create.
+            custom_ca_key: A CA key to use as the cluster's root CA key.
+            extra_config: This dictionary can contain extra installation
+                configuration variables to add to base configurations.
+            log_output_live: If `True`, log output of subprocesses live.
+                If `True`, stderr is merged into stdout in the return value.
+            files_to_copy_to_installer: A mapping of host paths to paths on
+                the installer node. These are files to copy from the host to
+                the installer node before installing DC/OS.
+        """
+        return DCOS_Docker(
+            masters=masters,
+            agents=agents,
+            public_agents=public_agents,
+            extra_config=dict(extra_config or {}),
+            generate_config_path=self._generate_config_path,
+            dcos_docker_path=self._dcos_docker_path,
+            custom_ca_key=custom_ca_key,
+            log_output_live=log_output_live,
+            files_to_copy_to_installer=dict(files_to_copy_to_installer or {}),
+            tmp_dir_path=self._tmp_dir_path,
         )

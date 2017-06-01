@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Set
 from constantly import NamedConstant, Names
 
 from ._common import Node
-from ._dcos_docker import DCOS_Docker
+from ._dcos_docker import DCOS_Docker, DCOS_Docker_Backend
 
 
 class UnsupportedClusterBackend(Exception):
@@ -44,7 +44,7 @@ class Cluster(ContextDecorator):
         log_output_live: bool=False,
         destroy_on_error: bool=True,
         files_to_copy_to_installer: Optional[Dict[Path, Path]]=None,
-        backend: Backends=Backends.DCOS_DOCKER,
+        backend: Optional[DCOS_Docker_Backend]=None,
     ) -> None:
         """
         Create a DC/OS cluster.
@@ -63,25 +63,22 @@ class Cluster(ContextDecorator):
             files_to_copy_to_installer: A mapping of host paths to paths on
                 the installer node. These are files to copy from the host to
                 the installer node before installing DC/OS.
-            backend: The backend to use for creating a cluster.
-
-        Raises:
-            UnsupportedClusterBackend: An unsupported `backend` was chosen.
+            backend: The backend factory to use for creating a cluster.
         """
         self._destroy_on_error = destroy_on_error
         self._log_output_live = log_output_live
 
-        supported_backends = (Backends.DCOS_DOCKER, )
-        if backend not in supported_backends:
-            raise UnsupportedClusterBackend()
+        if not backend:
+            backend = DCOS_Docker_Backend(
+                generate_config_path=Path('/tmp/dcos_generate_config.sh'),
+                dcos_docker_path=Path('/tmp/dcos-docker'),
+            )
 
-        self._backend = DCOS_Docker(
+        self._backend = backend.create(
             masters=masters,
             agents=agents,
             public_agents=public_agents,
             extra_config=dict(extra_config or {}),
-            generate_config_path=Path('/tmp/dcos_generate_config.sh'),
-            dcos_docker_path=Path('/tmp/dcos-docker'),
             custom_ca_key=custom_ca_key,
             log_output_live=self._log_output_live,
             files_to_copy_to_installer=dict(files_to_copy_to_installer or {}),
