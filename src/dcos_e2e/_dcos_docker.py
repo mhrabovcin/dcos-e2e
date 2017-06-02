@@ -128,6 +128,7 @@ class DCOS_Docker:  # pylint: disable=invalid-name
             'MASTER_CTR': master_ctr,
             'AGENT_CTR': agent_ctr,
             'PUBLIC_AGENT_CTR': public_agent_ctr,
+            'HOME_MOUNTS': '',
         }  # type: Dict[str, str]
 
         if extra_config:
