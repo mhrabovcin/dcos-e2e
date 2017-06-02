@@ -222,7 +222,7 @@ class DCOS_Docker:  # pylint: disable=invalid-name
         Returns: ``Node``s corresponding to containers with names starting
             with ``container_base_name``.
         """
-        client = docker.from_env()
+        client = docker.from_env(version='auto')
         nodes = set([])  # type: Set[Node]
 
         while len(nodes) < num_nodes:
