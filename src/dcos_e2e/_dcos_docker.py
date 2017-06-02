@@ -108,7 +108,7 @@ class DCOS_Docker:  # pylint: disable=invalid-name
         #
         # aufs was chosen as it is supported on the version of Docker on
         # Travis CI.
-        client = docker.from_env()
+        client = docker.from_env(version='auto')
         host_storage_driver = client.info()['Driver']
         supported_storage_drivers = ('overlay', 'aufs')
         if host_storage_driver in supported_storage_drivers:
