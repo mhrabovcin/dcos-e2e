@@ -132,7 +132,7 @@ class Cluster(ContextDecorator):
             'DCOS_LOGIN_PW': 'admin',
         }
         set_env_variables = [
-            "{key}='{value}'".format(key=key, value=value)
+            "export {key}='{value}' && ".format(key=key, value=value)
             for key, value in environment_variables.items()
         ] + ['source', '/opt/mesosphere/environment.export']
 
