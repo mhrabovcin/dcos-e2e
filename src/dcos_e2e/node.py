@@ -7,6 +7,8 @@ from pathlib import Path
 from subprocess import PIPE, CompletedProcess, Popen
 from typing import Dict, List, Optional
 
+import paramiko
+
 from ._common import run_subprocess
 
 
@@ -126,3 +128,35 @@ class Node:
         process = Popen(args=ssh_args, stdout=PIPE, stderr=PIPE)
 
         return process
+
+    def scp(self, source_path: Path, dst_path: Path) -> None:
+        assert source_path.exists()
+        scp_cmd = [
+            'scp',
+            '-q',
+            '-o', 'IdentitiesOnly=yes',
+            '-o', 'StrictHostKeyChecking=no',
+            '-i', str(node._ssh_key_path),
+            '-o', 'PreferredAuthentications=publickey',
+            str(source.absolute()),
+            user + '@' + str(node.ip_address) + ":" + str(dest.absolute()),
+        ]
+
+        run_subprocess(scp_cmd, log_output_live=True)
+
+    def scp2(self, source: Path, dest: Path, user: str='root') -> None:
+        assert source.exists()
+
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(
+            str(node.ip_address),
+            username=user,
+            key_filename=str(node._ssh_key_path)
+        )
+
+        with closing(Write(ssh_client.get_transport(), '.')) as scp:
+            scp.send_file(
+                local_filename=str(source),
+                remote_filename=str(dest),
+            )

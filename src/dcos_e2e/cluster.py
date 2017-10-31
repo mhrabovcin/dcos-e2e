@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 
 import requests
 from requests import codes
+
 from retry import retry
 
 # Ignore a spurious error - this import is used in a type hint.
